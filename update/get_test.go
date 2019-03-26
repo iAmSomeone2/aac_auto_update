@@ -10,7 +10,6 @@ import (
 
 const (
 	dlFileName string = "patrons_raw-html.txt"
-	dlURL      string = "https://campaigns.communityfunded.com/download-supporters/?p_id=26458"
 )
 
 func TestCheckForUpdate(t *testing.T) {
