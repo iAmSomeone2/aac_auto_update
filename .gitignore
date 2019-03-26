@@ -10,3 +10,9 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Normal text files, test info, and sensitive docs
+*.txt
+*.csv
+*.xls
+*.xlsx
