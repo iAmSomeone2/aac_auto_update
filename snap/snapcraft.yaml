@@ -6,13 +6,17 @@ description: |
   This snap is a server-side automatic updater for the UMN SVP Adopt-a-Cell
   interactive graphic web app. It periodically checks if any new people have
   donated enough to have a cell in their name and updates the web app as needed.
+license: MIT
+
+architectures:
+  - build-on: [amd64, arm64]
+    run-on: [amd64, arm64]
 
 grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: devmode # use 'strict' once you have the right plugs and slots
 
 parts:
   aacautoupdate:
-    after: [go]
     source: .
     plugin: go
     go-importpath: github.com/iAmSomeone2/aacautoupdate
