@@ -27,10 +27,11 @@ func main() {
 	fileName := update.CheckForUpdate(*urlPtr)
 	fmt.Printf("Downloaded file located at: '%s'\n", fileName)
 
+	//var cleanData string
 	// If fileName is not empty, process the data in that file.
 	if fileName != "" {
 		// Continue work to process the data.
-
+		//cleanData, _ = data.Clean(fileName)
 	}
 
 	// Wait for the next check.

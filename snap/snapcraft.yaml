@@ -1,7 +1,7 @@
 name: aacautoupdate # you probably want to 'snapcraft register <name>'
 title: Adopt-a-Cell Auto Updater
 base: core18 # the base snap is the execution environment for this snap
-version: '0.1' # just for humans, typically '1.2+git' or '1.3.2'
+version: '0.1+git' # just for humans, typically '1.2+git' or '1.3.2'
 summary: Manages updating the Adopt-a-Cell web app. # 79 char long summary
 description: |
   This snap is a server-side automatic updater for the UMN SVP Adopt-a-Cell
@@ -21,6 +21,7 @@ parts:
   aacautoupdate:
     source: .
     plugin: go
+    go-channel: 1.12/stable
     go-importpath: github.com/iAmSomeone2/aacautoupdate
     build-packages:
       - build-essential

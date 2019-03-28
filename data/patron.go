@@ -14,7 +14,7 @@ type Patron struct {
 }
 
 const (
-	annonValIdx  int = 2
+	anonValIdx   int = 2
 	fNameValIdx  int = 5
 	lNameValIdx  int = 7
 	pledgeValIdx int = 30
