@@ -2,6 +2,8 @@ package data
 
 import (
 	"io/ioutil"
+	"log"
+	"strconv"
 	"strings"
 )
 
@@ -11,6 +13,11 @@ var replacementPairs = []string{
 	"\"", "", // Individual quotation marks are removed.
 	";", "", // Trailing semicolon removed.
 }
+
+const (
+	lineDelim  string = "],["
+	valueDelim string = ","
+)
 
 // Clean reads the data from the file which the fileName argument is pointing to
 // and places it into a string for initial processing. Extraneous characters and
@@ -47,5 +54,31 @@ func formatForUsage(content string) string {
 // GetPatronData takes in a string and returns a slice of
 // Patron structs.
 func GetPatronData(rawData string) []*Patron {
-	// First, split the data into a 1D slice of strings using
+	var patrons []*Patron
+	// First, split the data into a 1D slice of strings using lineDelim
+	lineData := strings.Split(rawData, lineDelim)
+
+	// For each line, split the data using valueDelim
+	for i, line := range lineData {
+		// Skip the first line since it's just headings.
+		if i == 0 {
+			continue
+		}
+
+		values := strings.Split(line, valueDelim)
+
+		// Grab the values we need.
+		anon := values[anonValIdx] == "yes"
+		name := strings.Split(values[fNameValIdx], " ")
+		fName := name[0]
+		lName := name[1]
+
+		pledgeAmt, err := strconv.Atoi(values[pledgeValIdx])
+		if err != nil {
+			log.Panic(err)
+		}
+
+		patrons = append(patrons, NewPatron(anon, fName, lName, pledgeAmt))
+	}
+	return patrons
 }

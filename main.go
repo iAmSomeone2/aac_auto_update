@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"syscall"
 
+	"github.com/iAmSomeone2/aacautoupdate/data"
 	"github.com/iAmSomeone2/aacautoupdate/update"
 )
 
@@ -31,7 +32,9 @@ func main() {
 	// If fileName is not empty, process the data in that file.
 	if fileName != "" {
 		// Continue work to process the data.
-		//cleanData, _ = data.Clean(fileName)
+		cleanData, _ := data.Clean(fileName)
+		patrons := data.GetPatronData(cleanData)
+		fmt.Println(patrons)
 	}
 
 	// Wait for the next check.
