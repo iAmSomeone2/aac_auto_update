@@ -85,7 +85,7 @@ func (patronList PatronList) MarshalJSON() ([]byte, error) {
 // String returns a string version of the data PatronList represents
 // MarshalJSON is used to construct the string.
 func (patronList *PatronList) String() string {
-	jsonStr, err := json.MarshalIndent(patronList, "", "    ")
+	jsonStr, err := json.MarshalIndent(patronList, "", "  ")
 	if err != nil {
 		log.Panic(err)
 	}

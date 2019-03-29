@@ -82,3 +82,9 @@ func GetPatronData(rawData string) []*Patron {
 	}
 	return patrons
 }
+
+// ToJSONFile exports the contents of a PatronList to a JSON file.
+func (patronList *PatronList) ToJSONFile(fileName string) error {
+
+	return nil
+}

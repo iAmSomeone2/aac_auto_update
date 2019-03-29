@@ -34,6 +34,11 @@ const (
 func NewPatron(anon bool, fName, lName string, pledgeAmt int) *Patron {
 	cellNum := float32(pledgeAmt) / float32(cellCost)
 
+	if anon {
+		fName = "Anonymous"
+		lName = "Donor"
+	}
+
 	return &Patron{
 		anonymous: anon,
 		firstName: fName,
