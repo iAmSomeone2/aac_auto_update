@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 // Patron provides a structure for storing the values needed for updating the
@@ -17,16 +16,13 @@ type Patron struct {
 	firstName string
 	lastName  string
 	pledgeAmt int
-	cellNum   float32
+	cellAmt   float32
 }
-
-// PatronList aliases a slice of Patron references.
-type PatronList []*Patron
 
 const (
 	anonValIdx  int = 2
 	fNameValIdx int = 5
-	//lNameValIdx  int = 7
+	// lNameValIdx  int = 7
 	pledgeValIdx int = 32
 
 	cellCost int = 50
@@ -43,7 +39,7 @@ func NewPatron(anon bool, fName, lName string, pledgeAmt int) *Patron {
 		firstName: fName,
 		lastName:  lName,
 		pledgeAmt: pledgeAmt,
-		cellNum:   cellNum,
+		cellAmt:   cellNum,
 	}
 }
 
@@ -52,20 +48,48 @@ func NewPatron(anon bool, fName, lName string, pledgeAmt int) *Patron {
 	with JSON encoding and decoding.
 */
 
-// MarshalJSON marshals the Patron struct into a JSON-compatible byte slice
-func (patron *Patron) MarshalJSON() ([]byte, error) {
-	this := *patron
+// MarshalJSON marshals the Patron struct into a JSON-compatible byte slice.
+func (patron Patron) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString("{")
 
 	/*
 		For each field in the Patron struct, construct a new string to be passed
 		to the byte buffer.
 	*/
-	anonJSON, err := json.Marshal(this.anonymous)
+	// anonymous field
+	anonJSON, err := json.Marshal(patron.anonymous)
 	if err != nil {
 		return nil, err
 	}
 	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "anonymous", string(anonJSON)))
+
+	// first_name field
+	fNameJSON, err := json.Marshal(patron.firstName)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "first_name", string(fNameJSON)))
+
+	// last_name field
+	lNameJSON, err := json.Marshal(patron.lastName)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "last_name", string(lNameJSON)))
+
+	// pledge_amt field
+	pledgeJSON, err := json.Marshal(patron.pledgeAmt)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "pledge_amt", string(pledgeJSON)))
+
+	// cell_num field
+	cellJSON, err := json.Marshal(patron.cellAmt)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s", "cell_amt", string(cellJSON)))
 
 	buffer.WriteString("}")
 	return buffer.Bytes(), nil
@@ -74,17 +98,9 @@ func (patron *Patron) MarshalJSON() ([]byte, error) {
 // String returns the values contained in a Patron struct formatted so that
 // it makes sense to read.
 func (patron *Patron) String() string {
-	this := *patron
-	var strBuilder strings.Builder
+	//this := *patron
 
-	fmt.Fprintf(&strBuilder,
-		"{Patron: %s %s Pledge: $%d Cells Adopted: %f Anonymous: %t}",
-		this.firstName,
-		this.lastName,
-		this.pledgeAmt,
-		this.cellNum,
-		this.anonymous,
-	)
+	jsonBytes, _ := json.Marshal(patron)
 
-	return strBuilder.String()
+	return string(jsonBytes)
 }

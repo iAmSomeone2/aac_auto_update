@@ -7,7 +7,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"syscall"
+	"log"
+	"os"
 
 	"github.com/iAmSomeone2/aacautoupdate/data"
 	"github.com/iAmSomeone2/aacautoupdate/update"
@@ -17,12 +18,18 @@ import (
 func main() {
 	// Set up cmd line flags
 	urlPtr := flag.String("source", "", "A web URL for accessing the patron data.")
+	cleanPtr := flag.Bool("cleanrun", false, "Set this flag to clear the download cache.")
 
 	flag.Parse()
 
 	if *urlPtr == "" {
-		fmt.Println("ERROR: A URL must be provided to use this program!")
-		syscall.Exit(1)
+		log.Fatalln("ERROR: A URL must be provided to use this program!")
+	}
+
+	// If the cleanrun flag is set, delete the current and previous txt files
+	if *cleanPtr {
+		os.Remove("patrons_raw.txt")
+		os.Remove("partons_raw.old.txt")
 	}
 
 	fileName := update.CheckForUpdate(*urlPtr)
@@ -33,8 +40,8 @@ func main() {
 	if fileName != "" {
 		// Continue work to process the data.
 		cleanData, _ := data.Clean(fileName)
-		patrons := data.GetPatronData(cleanData)
-		fmt.Println(patrons)
+		patronList := data.NewPatronList(data.GetPatronData(cleanData))
+		fmt.Println(patronList)
 	}
 
 	// Wait for the next check.
