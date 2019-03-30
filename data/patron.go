@@ -48,11 +48,6 @@ func NewPatron(anon bool, fName, lName string, pledgeAmt int) *Patron {
 	}
 }
 
-/*
-	TODO: Use MarshalJSON and UnmarshalJSON interfaces to make Patron compatible
-	with JSON encoding and decoding.
-*/
-
 // MarshalJSON marshals the Patron struct into a JSON-compatible byte slice.
 func (patron Patron) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString("{")

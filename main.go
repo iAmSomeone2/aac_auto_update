@@ -28,8 +28,14 @@ func main() {
 
 	// If the cleanrun flag is set, delete the current and previous txt files
 	if *cleanPtr {
-		os.Remove("patrons_raw.txt")
-		os.Remove("partons_raw.old.txt")
+		err := os.Remove("patrons_raw.txt")
+		if err != nil {
+			log.Println(err)
+		}
+		err = os.Remove("patrons_raw.old.txt")
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	fileName := update.CheckForUpdate(*urlPtr)
