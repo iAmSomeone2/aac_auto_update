@@ -1,12 +1,19 @@
 package data
 
-import "bytes"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"log"
+)
 
 // Cells is a struct that represents all information regarding the cell array.
 // This includes the PatronList, active cells, and their owners.
 type CellList struct {
-	patrons PatronList
-	cells   []*Cell
+	patrons          *PatronList
+	cells            []*Cell
+	credit           float32
+	remainingPatrons *PatronList
 }
 
 // Cell is a struct representing an individual cell from the array. The id value
@@ -21,7 +28,7 @@ type Cell struct {
 // NewCellList returns a pointer to a newly created CellList object. The PatronList is
 // placed directly into the object. The Cell pointer slice is constructed based on the
 // contents of the PatronList.
-func NewCellList(list PatronList) *CellList {
+func NewCellList(list *PatronList) *CellList {
 
 	// For each Patron in the PatronList, construct a Cell and determine which patrons are the adoptees.
 	var adoptees []*Patron
@@ -75,15 +82,17 @@ func NewCellList(list PatronList) *CellList {
 			adoptees = nil
 		}
 
-		// There is still a little credit left, so attribute it to the current patron.
+		// If there is still a little credit left, attribute it to the current patron.
 		if runningCredit > 0 {
 			adoptees = append(adoptees, patron)
 		}
 	}
 
 	return &CellList{
-		patrons: list,
-		cells:   cells,
+		patrons:          list,
+		cells:            cells,
+		credit:           runningCredit,
+		remainingPatrons: NewPatronList(adoptees),
 	}
 }
 
@@ -91,6 +100,91 @@ func NewCellList(list PatronList) *CellList {
 func (cell Cell) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString("{")
 
+	// total_cells field
+	idJSON, err := json.Marshal(cell.id)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "id", string(idJSON)))
+
+	buffer.WriteString("adoptee:[")
+	for i, adoptee := range cell.adoptee {
+		adoptJSON, err := json.Marshal(adoptee)
+		if err != nil {
+			return nil, err
+		}
+		buffer.WriteString(string(adoptJSON))
+
+		// Add a comma between every adoptee except for the last one.
+		if i < len(cell.adoptee)-1 {
+			buffer.WriteRune(',')
+		}
+	}
+
+	buffer.WriteString("]}")
+	return buffer.Bytes(), nil
+}
+
+func (list CellList) MarshalJSON() ([]byte, error) {
+	buffer := bytes.NewBufferString("{")
+
+	// Marshall in the main PatronList object
+	patronsJSON, err := json.Marshal(list.patrons)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "patrons", string(patronsJSON)))
+
+	// Marshall in the Cell pointer slice
+	buffer.WriteString("adopted_cells:[")
+
+	for i, cell := range list.cells {
+		cellJSON, err := json.Marshal(cell)
+		if err != nil {
+			return nil, err
+		}
+		buffer.WriteString(string(cellJSON))
+
+		if i < len(list.cells)-1 {
+			buffer.WriteRune(',')
+		}
+	}
+
+	buffer.WriteRune(']')
+	// Marshall in the credit value
+	creditJSON, err := json.Marshal(list.credit)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "credit", string(creditJSON)))
+
+	//Marshall in the remainingPatrons PatronList
+	remainingJSON, err := json.Marshal(list.remainingPatrons)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s", "remaining_patrons", string(remainingJSON)))
+
 	buffer.WriteRune('}')
 	return buffer.Bytes(), nil
+}
+
+// String returns a stringified version of the MarshalJSON output of Cell
+func (cell Cell) String() string {
+	out, err := json.MarshalIndent(cell, "", "  ")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return string(out)
+}
+
+// String returns a stringified version of the MarshalJSON output of CellList
+func (list CellList) String() string {
+	out, err := json.MarshalIndent(list, "", "  ")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return string(out)
 }

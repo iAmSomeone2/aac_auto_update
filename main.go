@@ -47,6 +47,7 @@ func main() {
 		// Continue work to process the data.
 		cleanData, _ := data.Clean(fileName)
 		patronList := data.NewPatronList(data.GetPatronData(cleanData))
+		cellList := data.NewCellList(patronList)
 		fmt.Println(patronList)
 	}
 
