@@ -10,8 +10,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/iAmSomeone2/aacautoupdate/data"
-	"github.com/iAmSomeone2/aacautoupdate/update"
+	//"github.com/iAmSomeone2/aacautoupdate/data"
+	"./data"
+	"./update"
 )
 
 // Main sets up the main loop.
@@ -48,7 +49,7 @@ func main() {
 		cleanData, _ := data.Clean(fileName)
 		patronList := data.NewPatronList(data.GetPatronData(cleanData))
 		cellList := data.NewCellList(patronList)
-		fmt.Println(patronList)
+		fmt.Println(cellList)
 	}
 
 	// Wait for the next check.

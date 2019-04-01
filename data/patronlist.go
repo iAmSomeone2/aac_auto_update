@@ -36,6 +36,17 @@ func NewPatronList(newPatrons []*Patron) *PatronList {
 	}
 }
 
+// AddPatron appends a new Patron to the PatronList and update all struct values to reflect this change.
+func (patronList *PatronList) AddPatron(newPatron *Patron) {
+	// Append the patron to the list
+	patronList.patrons = append(patronList.patrons, newPatron)
+
+	// Update the remaining values.
+	patronList.length += 1
+	patronList.totalRaised += newPatron.pledgeAmt
+	patronList.totalCells += newPatron.cellAmt
+}
+
 // MarshalJSON implements the MarshalJSON interface and allows for formatting
 // the PatronList struct as JSON data.
 func (patronList PatronList) MarshalJSON() ([]byte, error) {
