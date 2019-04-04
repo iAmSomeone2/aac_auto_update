@@ -52,6 +52,7 @@ func reverse(patrons []*Patron) []*Patron {
 	// Since Go allows for multiple assignment, performing the flip can be done in one line.
 	for i := len(patrons)/2 - 1; i >= 0; i-- {
 		flip := len(patrons) - 1 - i
+		patrons[i].id, patrons[flip].id = patrons[flip].id, patrons[i].id
 		patrons[i], patrons[flip] = patrons[flip], patrons[i]
 	}
 
