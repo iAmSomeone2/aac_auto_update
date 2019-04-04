@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 )
 
@@ -13,7 +14,7 @@ type CellList struct {
 	patrons          *PatronList
 	cells            []*Cell
 	credit           float32
-	remainingPatrons *PatronList
+	remainingPatrons []int
 }
 
 // Cell is a struct representing an individual cell from the array. The id value
@@ -21,8 +22,8 @@ type CellList struct {
 // is a slice of Patron pointers because it is possible for a cell to be owned by
 // any number of patrons as long as their contributions equal out to the price per cell.
 type Cell struct {
-	id      int
-	adoptee *PatronList
+	id         int
+	adopteeIDs []int
 }
 
 // NewCellList returns a pointer to a newly created CellList object. The PatronList is
@@ -49,7 +50,7 @@ func NewCellList(list *PatronList) *CellList {
 		if cellNum > 0 {
 			// Create a Cell for each one that has been adopted
 			for i := 0; i < cellNum; i++ {
-				cells = append(cells, &Cell{id: cellsIdx, adoptee: NewPatronList([]*Patron{patron})})
+				cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: []int{patron.id}})
 				cellsIdx++
 			}
 		}
@@ -75,13 +76,18 @@ func NewCellList(list *PatronList) *CellList {
 		runningCredit = runningCredit - float32(cellNum)
 
 		if cellNum > 0 {
-			groupAdoptees(NewPatronList(adoptees), runningCredit)
+			adoptees, remaining, credit := groupAdoptees(adoptees, runningCredit)
+			var ids []int
+			for _, patron := range adoptees {
+				ids = append(ids, patron.id)
+			}
 			for i := 0; i < cellNum; i++ {
-				cells = append(cells, &Cell{id: cellsIdx, adoptee: NewPatronList(adoptees)})
+				cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: ids})
 				cellsIdx++
 			}
 			// Empty the adoptees slice
-			adoptees = nil
+			adoptees = remaining
+			runningCredit = credit
 		}
 
 		// If there is still a little credit left, attribute it to the current patron.
@@ -90,18 +96,23 @@ func NewCellList(list *PatronList) *CellList {
 		}
 	}
 
+	var remainingIDs []int
+	for _, patron := range adoptees {
+		remainingIDs = append(remainingIDs, patron.id)
+	}
+
 	return &CellList{
 		patrons:          list,
 		cells:            cells,
 		credit:           runningCredit,
-		remainingPatrons: NewPatronList(adoptees),
+		remainingPatrons: remainingIDs,
 	}
 }
 
 // groupAdoptees groups the left over adoptees so that the amounts that they paid equal out to an even $50 as best as
 // possible. The first *PatronList returned is the grouped adoptees, and the second is the remaining ones.
-func groupAdoptees(adoptees *PatronList, credit float32) (*PatronList, *PatronList, float32) {
-	var groups *PatronList
+func groupAdoptees(adoptees []*Patron, credit float32) ([]*Patron, []*Patron, float32) {
+	var groups []*Patron
 	remaining := adoptees
 
 	/*
@@ -114,10 +125,10 @@ func groupAdoptees(adoptees *PatronList, credit float32) (*PatronList, *PatronLi
 
 	for credit > 1 {
 		// Find the top payer in 'Remaining'
-		topPatron := remaining.patrons[0]
+		topPatron := remaining[0]
 		var usedIdx []int
 		var topIdx int
-		for i, patron := range remaining.patrons {
+		for i, patron := range remaining {
 			// Skip the first entry since we already have it
 			if i == 0 {
 				continue
@@ -136,7 +147,7 @@ func groupAdoptees(adoptees *PatronList, credit float32) (*PatronList, *PatronLi
 		for owners.totalCells < 1 {
 			topPatron = nil
 			var topIdx int
-			for i, patron := range remaining.patrons {
+			for i, patron := range remaining {
 				// Skip any used entries since we already have them.
 				skip := false
 				for _, val := range usedIdx {
@@ -186,21 +197,14 @@ func (cell Cell) MarshalJSON() ([]byte, error) {
 	}
 	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "id", string(idJSON)))
 
-	buffer.WriteString("\"adoptee\":[")
-	for i, adoptee := range cell.adoptee.patrons {
-		adoptJSON, err := json.Marshal(adoptee)
-		if err != nil {
-			return nil, err
-		}
-		buffer.WriteString(string(adoptJSON))
-
-		// Add a comma between every adoptee except for the last one.
-		if i < len(cell.adoptee.patrons)-1 {
-			buffer.WriteRune(',')
-		}
+	// adoptee_ids field
+	adopteesJSON, err := json.Marshal(cell.adopteeIDs)
+	if err != nil {
+		return nil, err
 	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s", "adoptee_ids", string(adopteesJSON)))
 
-	buffer.WriteString("]}")
+	buffer.WriteRune('}')
 	//fmt.Println(string(buffer.Bytes()))
 	return buffer.Bytes(), nil
 }
@@ -236,10 +240,18 @@ func (list CellList) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	buffer.WriteString(fmt.Sprintf("\"%s\":%s", "remaining_patrons", string(remainingJSON)))
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "remaining_patrons", string(remainingJSON)))
+
+	// Marshal in the patron data
+	//Marshall in the remainingPatrons PatronList
+	patronsJSON, err := json.Marshal(list.patrons)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s", "patron_list", string(patronsJSON)))
 
 	buffer.WriteRune('}')
-	fmt.Println(string(buffer.Bytes()))
+	// fmt.Println(string(buffer.Bytes()))
 	return buffer.Bytes(), nil
 }
 
@@ -261,4 +273,19 @@ func (list CellList) String() string {
 	}
 
 	return string(out)
+}
+
+// ToJSONFile writes the contents of the CellList to a JSON-formatted text file.
+func (list *CellList) ToJSONFile(fileName string) error {
+	data, err := json.MarshalIndent(list, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	// Write the JSON data to the file.
+	if err = ioutil.WriteFile(fileName, data, 0644); err != nil {
+		return err
+	}
+
+	return nil
 }

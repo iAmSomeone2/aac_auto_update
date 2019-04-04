@@ -15,6 +15,10 @@ import (
 	"./update"
 )
 
+const (
+	outputFile string = "data.json"
+)
+
 // Main sets up the main loop.
 func main() {
 	// Set up cmd line flags
@@ -49,7 +53,11 @@ func main() {
 		cleanData, _ := data.Clean(fileName)
 		patronList := data.NewPatronList(data.GetPatronData(cleanData))
 		cellList := data.NewCellList(patronList)
-		fmt.Println(cellList)
+		if err := cellList.ToJSONFile(outputFile); err != nil {
+			log.Panic(err)
+		} else {
+			log.Printf("Data written to %s\n", outputFile)
+		}
 	}
 
 	// Wait for the next check.

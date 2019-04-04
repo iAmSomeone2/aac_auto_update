@@ -7,31 +7,40 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
+	"time"
 )
 
 // Patron provides a structure for storing the values needed for updating the
 // JSON file that the web app reads from.
 type Patron struct {
-	anonymous bool
-	firstName string
-	lastName  string
-	pledgeAmt int
-	cellAmt   float32
+	id         int
+	pledgeTime time.Time
+	anonymous  bool
+	firstName  string
+	lastName   string
+	pledgeAmt  int
+	cellAmt    float32
 }
 
 const (
-	anonValIdx  int = 2
-	fNameValIdx int = 5
-	// lNameValIdx  int = 7
-	pledgeValIdx int = 32
+	anonValIdx     int = 2
+	fNameValIdx    int = 5
+	timePledgedIdx int = 0
+	pledgeValIdx   int = 32
 
 	cellCost int = 50
+
+	// Time used in this string must equate to Jan 2 15:04:05 MST 2006
+	// Example time from patron data: 2019-03-31 08:21:16
+	timeLayout string = "2006-01-02 15:04:05 MST"
+	timeZone   string = "CST"
 )
 
 // NewPatron returns a new Patron struct based off of the values passed when the
 // function is called. cellAmt is computed based on the pledge amount and may be
 // any floating point value greater than 0.
-func NewPatron(anon bool, fName, lName string, pledgeAmt int) *Patron {
+func NewPatron(id int, pledgeTime string, anon bool, fName, lName string, pledgeAmt int) *Patron {
 	cellNum := float32(pledgeAmt) / float32(cellCost)
 
 	if anon {
@@ -39,12 +48,22 @@ func NewPatron(anon bool, fName, lName string, pledgeAmt int) *Patron {
 		lName = "Donor"
 	}
 
+	// Create a time object from the imported time
+	parsedTime, err := time.Parse(timeLayout, pledgeTime+" "+timeZone)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// fmt.Println(parsedTime)
+
 	return &Patron{
-		anonymous: anon,
-		firstName: fName,
-		lastName:  lName,
-		pledgeAmt: pledgeAmt,
-		cellAmt:   cellNum,
+		id:         id,
+		pledgeTime: parsedTime,
+		anonymous:  anon,
+		firstName:  fName,
+		lastName:   lName,
+		pledgeAmt:  pledgeAmt,
+		cellAmt:    cellNum,
 	}
 }
 
@@ -56,6 +75,20 @@ func (patron Patron) MarshalJSON() ([]byte, error) {
 		For each field in the Patron struct, construct a new string to be passed
 		to the byte buffer.
 	*/
+	// id field
+	idJSON, err := json.Marshal(patron.id)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "id", string(idJSON)))
+
+	// pledgeTime field
+	timeJSON, err := json.Marshal(patron.pledgeTime)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "pledge_time", string(timeJSON)))
+
 	// anonymous field
 	anonJSON, err := json.Marshal(patron.anonymous)
 	if err != nil {

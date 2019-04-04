@@ -68,6 +68,7 @@ func GetPatronData(rawData string) []*Patron {
 		values := strings.Split(line, valueDelim)
 
 		// Grab the values we need.
+		pledgeTime := values[timePledgedIdx]
 		anon := values[anonValIdx] == "yes"
 		name := strings.Split(values[fNameValIdx], " ")
 		fName := name[0]
@@ -78,7 +79,7 @@ func GetPatronData(rawData string) []*Patron {
 			log.Panic(err)
 		}
 
-		patrons = append(patrons, NewPatron(anon, fName, lName, pledgeAmt))
+		patrons = append(patrons, NewPatron(i, pledgeTime, anon, fName, lName, pledgeAmt))
 	}
 	return patrons
 }

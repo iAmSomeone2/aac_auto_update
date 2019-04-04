@@ -29,7 +29,7 @@ func NewPatronList(newPatrons []*Patron) *PatronList {
 	}
 
 	return &PatronList{
-		patrons:     newPatrons,
+		patrons:     reverse(newPatrons),
 		length:      patronNum,
 		totalRaised: amtRaised,
 		totalCells:  cellNum,
@@ -45,6 +45,17 @@ func (patronList *PatronList) AddPatron(newPatron *Patron) {
 	patronList.length += 1
 	patronList.totalRaised += newPatron.pledgeAmt
 	patronList.totalCells += newPatron.cellAmt
+}
+
+// Reverse flips the order in which Patrons are stored in a []*Patron
+func reverse(patrons []*Patron) []*Patron {
+	// Since Go allows for multiple assignment, performing the flip can be done in one line.
+	for i := len(patrons)/2 - 1; i >= 0; i-- {
+		flip := len(patrons) - 1 - i
+		patrons[i], patrons[flip] = patrons[flip], patrons[i]
+	}
+
+	return patrons
 }
 
 // MarshalJSON implements the MarshalJSON interface and allows for formatting
@@ -90,6 +101,7 @@ func (patronList PatronList) MarshalJSON() ([]byte, error) {
 	buffer.WriteString(fmt.Sprintf("\"%s\":%s", "total_cells", string(cellsJSON)))
 
 	buffer.WriteRune('}')
+	// fmt.Println(string(buffer.Bytes()))
 	return buffer.Bytes(), nil
 }
 
