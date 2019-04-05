@@ -10,9 +10,8 @@ import (
 	"os"
 	"path"
 
-	//"github.com/iAmSomeone2/aacautoupdate/data"
-	"./data"
-	"./update"
+	"github.com/iAmSomeone2/aacautoupdate/data"
+	"github.com/iAmSomeone2/aacautoupdate/update"
 )
 
 const (
