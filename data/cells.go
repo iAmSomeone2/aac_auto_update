@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"path"
 )
 
 // Cells is a struct that represents all information regarding the cell array.
@@ -14,7 +16,7 @@ type CellList struct {
 	patrons          *PatronList
 	cells            []*Cell
 	credit           float32
-	remainingPatrons []int
+	remainingPatrons map[int]*Patron
 }
 
 // Cell is a struct representing an individual cell from the array. The id value
@@ -30,160 +32,94 @@ type Cell struct {
 // placed directly into the object. The Cell pointer slice is constructed based on the
 // contents of the PatronList.
 func NewCellList(list *PatronList) *CellList {
-	// TODO: group adoptees that pay <$50 so that the cell splits make sense.
 
 	// For each Patron in the PatronList, construct a Cell and determine which patrons are the adoptees.
-	var adoptees []*Patron
-	var runningCredit float32
+	creditPatrons := make(map[int]*Patron)
+	var credit float32
 	var cells []*Cell
 	cellsIdx := 1
 
 	for _, patron := range list.patrons {
-		cellNum := int(patron.cellAmt) // Doing this conversion should chop off the decimal value (which we want to do)
-		credit := patron.cellAmt - float32(cellNum)
+		// This conversion will chop off any decimal values.
+		for i := 0; i < int(patron.cellAmt); i++ {
+			cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: []int{patron.id}})
+			cellsIdx++
+		}
 
-		/*
-			cellNum is only used for the current patron. The idea here is that cellNum will always be an int, and that
-			by checking this first, we can assign the correct number of cells to an individual patron. This should even
-			cover cases in which a patron pays enough for at least a number of cells but still has left over credit.
-		*/
-		if cellNum > 0 {
-			// Create a Cell for each one that has been adopted
-			for i := 0; i < cellNum; i++ {
-				cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: []int{patron.id}})
-				cellsIdx++
+		// Throw any patron that hasn't paid enough for a cell into the creditIDs list
+		if patron.cellAmt < 1 {
+			creditPatrons[patron.id] = patron
+			credit += patron.cellAmt
+		}
+
+		// If credit is >= 1 we should try to pair the extra patrons.
+		if credit >= 1 {
+			groups, remaining := groupPatrons(creditPatrons)
+			// Create any new cells from the resulting groups
+			if _, hasZero := groups[0]; !hasZero {
+				for _, group := range groups {
+					cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: group})
+					cellsIdx++
+				}
+				creditPatrons = remaining // Go won't let me assign this at the function call for some reason.
+
+				// Here we update the remaining credit
+				var newCredit float32
+				for _, creditPatron := range creditPatrons {
+					newCredit += creditPatron.cellAmt
+				}
+				credit = newCredit
 			}
 		}
-
-		/*
-			After all of the cells that are wholly owned by a patron are created and added to the cells slice, if the
-			credit remaining is between 0 and 1 cell it is added onto the runningCredit pile, and this patron is added
-			onto the running list of adoptees.
-		*/
-		if credit == 0 {
-			continue // No credit remains, so just skip to the next patron.
-		}
-
-		// Append the appropriate values into the running totals.
-		runningCredit += credit
-		//adoptees = append(adoptees, patron)
-
-		/*
-			If runningCredit is at least 1, create and append a cell that is attributed to the accumulated patrons.
-			This process is essentially the same as it is with an individual patron.
-		*/
-		cellNum = int(runningCredit)
-		runningCredit = runningCredit - float32(cellNum)
-
-		if cellNum > 0 {
-			adoptees, remaining, credit := groupAdoptees(adoptees, runningCredit)
-			var ids []int
-			for _, patron := range adoptees {
-				ids = append(ids, patron.id)
-			}
-			for i := 0; i < cellNum; i++ {
-				cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: ids})
-				cellsIdx++
-			}
-			// Empty the adoptees slice
-			adoptees = remaining
-			runningCredit = credit
-		}
-
-		// If there is still a little credit left, attribute it to the current patron.
-		if runningCredit > 0 {
-			adoptees = append(adoptees, patron)
-		}
-	}
-
-	var remainingIDs []int
-	for _, patron := range adoptees {
-		remainingIDs = append(remainingIDs, patron.id)
 	}
 
 	return &CellList{
 		patrons:          list,
 		cells:            cells,
-		credit:           runningCredit,
-		remainingPatrons: remainingIDs,
+		credit:           credit,
+		remainingPatrons: creditPatrons,
 	}
 }
 
-// groupAdoptees groups the left over adoptees so that the amounts that they paid equal out to an even $50 as best as
-// possible. The first *PatronList returned is the grouped adoptees, and the second is the remaining ones.
-func groupAdoptees(adoptees []*Patron, credit float32) ([]*Patron, []*Patron, float32) {
-	var groups []*Patron
-	remaining := adoptees
+// groupPatrons takes in a list of Patrons and groups them into a map if they can be put together to equal the
+// value of a single cell. Any leftover Patrons will have their IDs returned separately.
+func groupPatrons(patronMap map[int]*Patron) (map[int][]int, map[int]*Patron) {
+	groups := make(map[int][]int)
+	remains := make(map[int]*Patron)
+	paired := make(map[*Patron]bool)
 
-	/*
-		For each iteration of the loop, find the patron that has paid the most and determine how much is remaining to
-		reach the cost of a single cell. Then find the next patron in the list that can fill what's left as close as
-		possible. Continue until enough credit to count as a cell has been attributed. If getting an even 1 cell isn't
-		possible, the roll over patron will have any additional credit over 1 set as their donation amount, and be
-		put back into the 'remaining' list so that they can be used to fill in a gap later.
-	*/
-
-	for credit > 1 {
-		// Find the top payer in 'Remaining'
-		topPatron := remaining[0]
-		var usedIdx []int
-		var topIdx int
-		for i, patron := range remaining {
-			// Skip the first entry since we already have it
-			if i == 0 {
-				continue
-			}
-
-			// Compare each remaining entry against the current top
-			if patron.cellAmt > topPatron.cellAmt {
-				topPatron = patron
-				topIdx = i
-			}
-		}
-		usedIdx = append(usedIdx, topIdx)
-
-		// Now, find the next top payers where their total cells are <= 1.
-		owners := NewPatronList([]*Patron{topPatron})
-		for owners.totalCells < 1 {
-			topPatron = nil
-			var topIdx int
-			for i, patron := range remaining {
-				// Skip any used entries since we already have them.
-				skip := false
-				for _, val := range usedIdx {
-					if i == val {
-						skip = true
-						break
+	count := 0
+	for _, iPatron := range patronMap {
+		// First, we should pair up anyone who has donated half of the value of a cell.
+		if !paired[iPatron] {
+			var group []int
+			if iPatron.cellAmt == 0.5 {
+				group = append(group, iPatron.id)
+				//Check the remainder of the patronMap
+				for _, jPatron := range patronMap {
+					if !paired[jPatron] && jPatron != iPatron {
+						if jPatron.cellAmt == 0.5 {
+							group = append(group, jPatron.id)
+							paired[iPatron] = true
+							paired[jPatron] = true
+							count++
+							break
+						}
 					}
 				}
-
-				if skip {
-					continue
-				}
-
-				if topPatron == nil {
-					topPatron = patron
-					topIdx = i
-				}
-
-				// Compare each remaining entry against the current top
-				if patron.cellAmt > topPatron.cellAmt {
-					topPatron = patron
-					topIdx = i
-				}
 			}
-			// If we get here and topPatron is still nil, then we need to figure out if we have a full cell or not.
-			if topPatron == nil {
-				break
-			}
-
-			usedIdx = append(usedIdx, topIdx)
-			owners.AddPatron(topPatron)
+			groups[count] = group
 		}
-
 	}
 
-	return groups, remaining, credit
+	// Put the ID of every patron that wasn't paired into the "remains" array.
+	for id, patron := range patronMap {
+		if !paired[patron] {
+			remains[id] = patron
+		}
+	}
+
+	return groups, remains
 }
 
 // MarshallJSON formats the contents of the Cell struct so that it may be used in JSON data.
@@ -213,7 +149,7 @@ func (list CellList) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString("{")
 
 	// Marshall in the Cell pointer slice
-	buffer.WriteString("\"adopted_cells\":[")
+	buffer.WriteString("\"cells\":[")
 
 	for i, cell := range list.cells {
 		cellJSON, err := json.Marshal(cell)
@@ -235,12 +171,21 @@ func (list CellList) MarshalJSON() ([]byte, error) {
 	}
 	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "credit", string(creditJSON)))
 
-	//Marshall in the remainingPatrons PatronList
-	remainingJSON, err := json.Marshal(list.remainingPatrons)
-	if err != nil {
-		return nil, err
+	//Marshall in the remainingPatrons ids
+	buffer.WriteString("\"remaining\": [")
+	i := 0
+	for id := range list.remainingPatrons {
+		idJSON, err := json.Marshal(id)
+		if err != nil {
+			return nil, err
+		}
+		buffer.WriteString(string(idJSON))
+		if i < len(list.remainingPatrons)-1 {
+			buffer.WriteRune(',')
+		}
+		i++
 	}
-	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "remaining_patrons", string(remainingJSON)))
+	buffer.WriteString("],")
 
 	// Marshal in the patron data
 	//Marshall in the remainingPatrons PatronList
@@ -277,6 +222,12 @@ func (list CellList) String() string {
 
 // ToJSONFile writes the contents of the CellList to a JSON-formatted text file.
 func (list *CellList) ToJSONFile(fileName string) error {
+	// First, confirm that the directory exists.
+	err := os.MkdirAll(path.Dir(fileName), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	data, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
 		return err

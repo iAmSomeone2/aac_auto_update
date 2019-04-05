@@ -6,9 +6,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
+	"path"
 
 	//"github.com/iAmSomeone2/aacautoupdate/data"
 	"./data"
@@ -24,6 +24,7 @@ func main() {
 	// Set up cmd line flags
 	urlPtr := flag.String("source", "", "A web URL for accessing the patron data.")
 	cleanPtr := flag.Bool("cleanrun", false, "Set this flag to clear the download cache.")
+	outPtr := flag.String("out", "./", "The directory in which to place the data.json file.")
 
 	flag.Parse()
 
@@ -33,31 +34,37 @@ func main() {
 
 	// If the cleanrun flag is set, delete the current and previous txt files
 	if *cleanPtr {
-		err := os.Remove("patrons_raw.txt")
+		cacheDir := update.GetCacheDir()
+		cacheDir = path.Join(cacheDir, update.AppDir)
+		err := os.Remove(path.Join(cacheDir, update.BaseFileName))
 		if err != nil {
 			log.Println(err)
 		}
-		err = os.Remove("patrons_raw.old.txt")
+		err = os.Remove(path.Join(cacheDir, update.OldFileName))
 		if err != nil {
 			log.Println(err)
 		}
 	}
 
+	outputPath := path.Join(*outPtr, outputFile)
+
 	fileName := update.CheckForUpdate(*urlPtr)
-	fmt.Printf("Downloaded file located at: '%s'\n", fileName)
 
 	//var cleanData string
 	// If fileName is not empty, process the data in that file.
 	if fileName != "" {
+		log.Printf("Downloaded file located at: '%s'\n", fileName)
 		// Continue work to process the data.
 		cleanData, _ := data.Clean(fileName)
 		patronList := data.NewPatronList(data.GetPatronData(cleanData))
 		cellList := data.NewCellList(patronList)
-		if err := cellList.ToJSONFile(outputFile); err != nil {
+		if err := cellList.ToJSONFile(outputPath); err != nil {
 			log.Panic(err)
 		} else {
 			log.Printf("Data written to %s\n", outputFile)
 		}
+	} else {
+		log.Printf("Nothing to do. Will check again soon.\n")
 	}
 
 	// Wait for the next check.
