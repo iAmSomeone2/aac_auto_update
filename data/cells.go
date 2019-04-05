@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"path"
 )
 
 // Cells is a struct that represents all information regarding the cell array.
@@ -30,7 +32,6 @@ type Cell struct {
 // placed directly into the object. The Cell pointer slice is constructed based on the
 // contents of the PatronList.
 func NewCellList(list *PatronList) *CellList {
-	// TODO: group adoptees that pay <$50 so that the cell splits make sense.
 
 	// For each Patron in the PatronList, construct a Cell and determine which patrons are the adoptees.
 	creditPatrons := make(map[int]*Patron)
@@ -57,7 +58,6 @@ func NewCellList(list *PatronList) *CellList {
 			// Create any new cells from the resulting groups
 			if _, hasZero := groups[0]; !hasZero {
 				for _, group := range groups {
-					fmt.Println(groups)
 					cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: group})
 					cellsIdx++
 				}
@@ -149,7 +149,7 @@ func (list CellList) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString("{")
 
 	// Marshall in the Cell pointer slice
-	buffer.WriteString("\"adopted_cells\":[")
+	buffer.WriteString("\"cells\":[")
 
 	for i, cell := range list.cells {
 		cellJSON, err := json.Marshal(cell)
@@ -171,13 +171,21 @@ func (list CellList) MarshalJSON() ([]byte, error) {
 	}
 	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "credit", string(creditJSON)))
 
-	//Marshall in the remainingPatrons PatronList
-	// TODO: Update this so that we just grab the Patron IDs.
-	remainingJSON, err := json.Marshal(list.remainingPatrons)
-	if err != nil {
-		return nil, err
+	//Marshall in the remainingPatrons ids
+	buffer.WriteString("\"remaining\": [")
+	i := 0
+	for id := range list.remainingPatrons {
+		idJSON, err := json.Marshal(id)
+		if err != nil {
+			return nil, err
+		}
+		buffer.WriteString(string(idJSON))
+		if i < len(list.remainingPatrons)-1 {
+			buffer.WriteRune(',')
+		}
+		i++
 	}
-	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "remaining_patrons", string(remainingJSON)))
+	buffer.WriteString("],")
 
 	// Marshal in the patron data
 	//Marshall in the remainingPatrons PatronList
@@ -214,6 +222,12 @@ func (list CellList) String() string {
 
 // ToJSONFile writes the contents of the CellList to a JSON-formatted text file.
 func (list *CellList) ToJSONFile(fileName string) error {
+	// First, confirm that the directory exists.
+	err := os.MkdirAll(path.Dir(fileName), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	data, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
 		return err

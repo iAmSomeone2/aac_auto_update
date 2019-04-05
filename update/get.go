@@ -7,30 +7,53 @@ import (
 	"bufio"
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 )
 
 const (
-	baseFileName string = "patrons_raw.txt"
-	oldFileName  string = "patrons_raw.old.txt"
+	AppDir       string = "adopt-a-cell"
+	BaseFileName string = "patrons_raw.txt"
+	OldFileName  string = "patrons_raw.old.txt"
 	searchStr    string = "var data"
 )
+
+func GetCacheDir() string {
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		log.Printf("WARN: Cache directory not found! Using working directory instead.")
+		cacheDir = "./"
+	}
+
+	return cacheDir
+}
 
 // CheckForUpdate grabs the latest version of the patrons file from the crowdfunding
 // page and determines if anything in the file has changed. If a change is detected,
 // then a string pointing to the resulting file is returned. Otherwise, "" is returned.
-// Additionally, if the file cannot be downloaded, "" is returned.
+// Additionally, if the file cannot be downloaded or the downloaded file is
+// identical to the original, "" is returned.
 func CheckForUpdate(url string) string {
 	// Create the file for the contents to be read into.
-	err := os.Rename(baseFileName, oldFileName) // TODO: Get the cache dir and use it
+	cacheDir := GetCacheDir()
+	cacheDir = path.Join(cacheDir, AppDir)
 
-	out, err := os.Create(baseFileName)
+	err := os.MkdirAll(cacheDir, os.ModePerm)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fullBase := path.Join(cacheDir, BaseFileName)
+	fullOldBase := path.Join(cacheDir, OldFileName)
+
+	err = os.Rename(fullBase, fullOldBase)
+
+	out, err := os.Create(fullBase)
 	if err != nil {
 		log.Println(err)
 		return ""
@@ -52,9 +75,9 @@ func CheckForUpdate(url string) string {
 		return ""
 	}
 
-	log.Printf("\nBytes copied to %s: %d\n", baseFileName, n)
+	log.Printf("\nBytes copied to %s: %d\n", fullBase, n)
 
-	err = cleanFile(baseFileName)
+	err = cleanFile(fullBase)
 	if err != nil {
 		log.Println(err)
 	}
@@ -63,7 +86,7 @@ func CheckForUpdate(url string) string {
 		Compare the two files. If there is no difference, return an empty
 		string to indicate that nothing further needs to be done.
 	*/
-	different := compareFiles(baseFileName, oldFileName)
+	different := compareFiles(fullBase, fullOldBase)
 
 	if different {
 		return out.Name()
@@ -111,8 +134,8 @@ func compareFiles(filePath0, filePath1 string) bool {
 		log.Println(err)
 	}
 
-	fmt.Printf("Hash0: %s\n", hash0)
-	fmt.Printf("Hash1: %s\n", hash1)
+	log.Printf("Hash0: %s\n", hash0)
+	log.Printf("Hash1: %s\n", hash1)
 
 	return hash0 != hash1
 }
