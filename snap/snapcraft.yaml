@@ -1,7 +1,7 @@
 name: aacautoupdate # you probably want to 'snapcraft register <name>'
 title: Adopt-a-Cell Auto Updater
 base: core18 # the base snap is the execution environment for this snap
-version: '0.1+git' # just for humans, typically '1.2+git' or '1.3.2'
+version: 0.1+git # just for humans, typically '1.2+git' or '1.3.2'
 summary: Manages updating the Adopt-a-Cell web app. # 79 char long summary
 description: |
   This snap is a server-side automatic updater for the UMN SVP Adopt-a-Cell
@@ -9,6 +9,8 @@ description: |
   donated enough to have a cell in their name and updates the web app as needed.
 license: MIT
 type: app
+
+icon: icons/icon.svg
 
 architectures:
   - build-on: [amd64, arm64]
@@ -24,9 +26,12 @@ parts:
     go-channel: 1.12/stable
     go-importpath: github.com/iAmSomeone2/aacautoupdate
     build-packages:
-      - build-essential
+      - g++
+      - gcc
+
 
 apps:
   aacautoupdate:
     command: aacautoupdate
-    # deamon: notify # I need to figure out how to set up daemons
+    daemon: simple
+    restart-condition: on-failure

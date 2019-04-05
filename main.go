@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"time"
 
 	"github.com/iAmSomeone2/aacautoupdate/data"
 	"github.com/iAmSomeone2/aacautoupdate/update"
@@ -24,12 +25,21 @@ func main() {
 	urlPtr := flag.String("source", "", "A web URL for accessing the patron data.")
 	cleanPtr := flag.Bool("cleanrun", false, "Set this flag to clear the download cache.")
 	outPtr := flag.String("out", "./", "The directory in which to place the data.json file.")
+	waitPtr := flag.Int64("wait", 5, "An integer value representing the number of minutes to wait between checks.")
 
 	flag.Parse()
 
 	if *urlPtr == "" {
 		log.Fatalln("ERROR: A URL must be provided to use this program!")
 	}
+
+	f, err := os.OpenFile("testlogfile.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
 
 	// If the cleanrun flag is set, delete the current and previous txt files
 	if *cleanPtr {
@@ -47,24 +57,45 @@ func main() {
 
 	outputPath := path.Join(*outPtr, outputFile)
 
-	fileName := update.CheckForUpdate(*urlPtr)
+	startLoop := true
+	waitTime := time.Duration(*waitPtr * int64(time.Minute))
+	for { // Run through this every five minutes.
+		updateTimer := time.NewTimer(waitTime)
 
-	//var cleanData string
-	// If fileName is not empty, process the data in that file.
-	if fileName != "" {
-		log.Printf("Downloaded file located at: '%s'\n", fileName)
-		// Continue work to process the data.
-		cleanData, _ := data.Clean(fileName)
-		patronList := data.NewPatronList(data.GetPatronData(cleanData))
-		cellList := data.NewCellList(patronList)
-		if err := cellList.ToJSONFile(outputPath); err != nil {
-			log.Panic(err)
-		} else {
-			log.Printf("Data written to %s\n", outputFile)
+		timerStop := false
+		if startLoop {
+			log.Println("Immediately pulling update for initial run.")
+			timerStop = updateTimer.Stop()
+			startLoop = false
 		}
-	} else {
-		log.Printf("Nothing to do. Will check again soon.\n")
-	}
+		if !timerStop {
+			<-updateTimer.C
+		}
+		fileName := update.CheckForUpdate(*urlPtr)
 
-	// Wait for the next check.
+		// If fileName is not empty, process the data in that file.
+		if fileName != "" {
+			log.Printf("Downloaded file located at: '%s'\n", fileName)
+			// Continue work to process the data.
+			cleanData, _ := data.Clean(fileName)
+			patronList := data.NewPatronList(data.GetPatronData(cleanData))
+			cellList := data.NewCellList(patronList)
+			if err := cellList.ToJSONFile(outputPath); err != nil {
+				log.Panic(err)
+			} else {
+				log.Printf("Data written to %s\n", outputFile)
+			}
+		} else {
+			log.Printf("Nothing to do. Will check again soon.\n")
+		}
+
+		// Wait for the next check.
+		var s string
+		if *waitPtr != 1 {
+			s = "s"
+		} else {
+			s = ""
+		}
+		log.Printf("Check finished. Waiting %d minute%s...\n", *waitPtr, s)
+	}
 }
