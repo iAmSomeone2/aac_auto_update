@@ -223,7 +223,7 @@ func (list CellList) String() string {
 // ToJSONFile writes the contents of the CellList to a JSON-formatted text file.
 func (list *CellList) ToJSONFile(fileName string) error {
 	// First, confirm that the directory exists.
-	err := os.MkdirAll(path.Dir(fileName), os.ModePerm)
+	err := os.MkdirAll(path.Dir(fileName), 644)
 	if err != nil {
 		return err
 	}

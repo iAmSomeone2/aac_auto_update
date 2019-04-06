@@ -12,19 +12,23 @@ import (
 	"time"
 
 	"github.com/iAmSomeone2/aacautoupdate/data"
+	"github.com/iAmSomeone2/aacautoupdate/logging"
 	"github.com/iAmSomeone2/aacautoupdate/update"
 )
 
 const (
 	outputFile string = "data.json"
+	defaultURL string = "https://campaigns.communityfunded.com/download-supporters/?p_id=26458"
+	defaultDir string = "/var/www/cell.bdavidson.dev/html/data"
+	logDir     string = ""
 )
 
 // Main sets up the main loop.
 func main() {
 	// Set up cmd line flags
-	urlPtr := flag.String("source", "", "A web URL for accessing the patron data.")
+	urlPtr := flag.String("source", defaultURL, "A web URL for accessing the patron data.")
 	cleanPtr := flag.Bool("cleanrun", false, "Set this flag to clear the download cache.")
-	outPtr := flag.String("out", "./", "The directory in which to place the data.json file.")
+	outPtr := flag.String("out", defaultDir, "The directory in which to place the data.json file.")
 	waitPtr := flag.Int64("wait", 5, "An integer value representing the number of minutes to wait between checks.")
 
 	flag.Parse()
@@ -33,13 +37,7 @@ func main() {
 		log.Fatalln("ERROR: A URL must be provided to use this program!")
 	}
 
-	f, err := os.OpenFile("testlogfile.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
-	}
-	defer f.Close()
-
-	log.SetOutput(f)
+	logger := logging.NewLogger()
 
 	// If the cleanrun flag is set, delete the current and previous txt files
 	if *cleanPtr {
@@ -51,7 +49,7 @@ func main() {
 		}
 		err = os.Remove(path.Join(cacheDir, update.OldFileName))
 		if err != nil {
-			log.Println(err)
+			logger.Println(err)
 		}
 	}
 

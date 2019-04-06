@@ -16,3 +16,8 @@
 *.csv
 *.xls
 *.xlsx
+
+
+*.deb
+aacupdate_*/
+data.json
