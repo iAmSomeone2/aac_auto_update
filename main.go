@@ -12,19 +12,22 @@ import (
 	"time"
 
 	"github.com/iAmSomeone2/aacautoupdate/data"
+	"github.com/iAmSomeone2/aacautoupdate/logging"
 	"github.com/iAmSomeone2/aacautoupdate/update"
 )
 
 const (
 	outputFile string = "data.json"
+	defaultURL string = "https://campaigns.communityfunded.com/download-supporters/?p_id=26458"
+	defaultDir string = "/var/www/cell.bdavidson.dev/html/data"
 )
 
 // Main sets up the main loop.
 func main() {
 	// Set up cmd line flags
-	urlPtr := flag.String("source", "", "A web URL for accessing the patron data.")
+	urlPtr := flag.String("source", defaultURL, "A web URL for accessing the patron data.")
 	cleanPtr := flag.Bool("cleanrun", false, "Set this flag to clear the download cache.")
-	outPtr := flag.String("out", "./", "The directory in which to place the data.json file.")
+	outPtr := flag.String("out", defaultDir, "The directory in which to place the data.json file.")
 	waitPtr := flag.Int64("wait", 5, "An integer value representing the number of minutes to wait between checks.")
 
 	flag.Parse()
@@ -33,13 +36,7 @@ func main() {
 		log.Fatalln("ERROR: A URL must be provided to use this program!")
 	}
 
-	f, err := os.OpenFile("testlogfile.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
-	}
-	defer f.Close()
-
-	log.SetOutput(f)
+	logger := logging.NewLogger()
 
 	// If the cleanrun flag is set, delete the current and previous txt files
 	if *cleanPtr {
@@ -47,11 +44,11 @@ func main() {
 		cacheDir = path.Join(cacheDir, update.AppDir)
 		err := os.Remove(path.Join(cacheDir, update.BaseFileName))
 		if err != nil {
-			log.Println(err)
+			logger.Warnln(err)
 		}
 		err = os.Remove(path.Join(cacheDir, update.OldFileName))
 		if err != nil {
-			log.Println(err)
+			logger.Warnln(err)
 		}
 	}
 
@@ -64,7 +61,7 @@ func main() {
 
 		timerStop := false
 		if startLoop {
-			log.Println("Immediately pulling update for initial run.")
+			logger.Println("Immediately pulling update for initial run.")
 			timerStop = updateTimer.Stop()
 			startLoop = false
 		}
@@ -81,12 +78,12 @@ func main() {
 			patronList := data.NewPatronList(data.GetPatronData(cleanData))
 			cellList := data.NewCellList(patronList)
 			if err := cellList.ToJSONFile(outputPath); err != nil {
-				log.Panic(err)
+				logger.Fatal(err)
 			} else {
-				log.Printf("Data written to %s\n", outputFile)
+				logger.Printf("Data written to %s\n", outputFile)
 			}
 		} else {
-			log.Printf("Nothing to do. Will check again soon.\n")
+			logger.Printf("Nothing to do. Will check again soon.\n")
 		}
 
 		// Wait for the next check.
@@ -96,6 +93,6 @@ func main() {
 		} else {
 			s = ""
 		}
-		log.Printf("Check finished. Waiting %d minute%s...\n", *waitPtr, s)
+		logger.Printf("Check finished. Waiting %d minute%s...\n", *waitPtr, s)
 	}
 }

@@ -5,18 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
+
+	"github.com/iAmSomeone2/aacautoupdate/logging"
 )
 
-// Cells is a struct that represents all information regarding the cell array.
+// CellList is a struct that represents all information regarding the cell array.
 // This includes the PatronList, active cells, and their owners.
 type CellList struct {
 	patrons          *PatronList
 	cells            []*Cell
 	credit           float32
 	remainingPatrons map[int]*Patron
+	logger           *logging.Logger
 }
 
 // Cell is a struct representing an individual cell from the array. The id value
@@ -26,6 +28,7 @@ type CellList struct {
 type Cell struct {
 	id         int
 	adopteeIDs []int
+	logger     *logging.Logger
 }
 
 // NewCellList returns a pointer to a newly created CellList object. The PatronList is
@@ -38,11 +41,12 @@ func NewCellList(list *PatronList) *CellList {
 	var credit float32
 	var cells []*Cell
 	cellsIdx := 1
+	logger := logging.NewLogger()
 
 	for _, patron := range list.patrons {
 		// This conversion will chop off any decimal values.
 		for i := 0; i < int(patron.cellAmt); i++ {
-			cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: []int{patron.id}})
+			cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: []int{patron.id}, logger: logger})
 			cellsIdx++
 		}
 
@@ -58,7 +62,7 @@ func NewCellList(list *PatronList) *CellList {
 			// Create any new cells from the resulting groups
 			if _, hasZero := groups[0]; !hasZero {
 				for _, group := range groups {
-					cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: group})
+					cells = append(cells, &Cell{id: cellsIdx, adopteeIDs: group, logger: logger})
 					cellsIdx++
 				}
 				creditPatrons = remaining // Go won't let me assign this at the function call for some reason.
@@ -78,6 +82,7 @@ func NewCellList(list *PatronList) *CellList {
 		cells:            cells,
 		credit:           credit,
 		remainingPatrons: creditPatrons,
+		logger:           logger,
 	}
 }
 
@@ -122,7 +127,7 @@ func groupPatrons(patronMap map[int]*Patron) (map[int][]int, map[int]*Patron) {
 	return groups, remains
 }
 
-// MarshallJSON formats the contents of the Cell struct so that it may be used in JSON data.
+// MarshalJSON formats the contents of the Cell struct so that it may be used in JSON data.
 func (cell Cell) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString("{")
 
@@ -204,7 +209,7 @@ func (list CellList) MarshalJSON() ([]byte, error) {
 func (cell Cell) String() string {
 	out, err := json.MarshalIndent(cell, "", "  ")
 	if err != nil {
-		log.Panic(err)
+		cell.logger.Panic(err)
 	}
 
 	return string(out)
@@ -214,7 +219,7 @@ func (cell Cell) String() string {
 func (list CellList) String() string {
 	out, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
-		log.Panic(err)
+		list.logger.Panic(err)
 	}
 
 	return string(out)
@@ -223,7 +228,7 @@ func (list CellList) String() string {
 // ToJSONFile writes the contents of the CellList to a JSON-formatted text file.
 func (list *CellList) ToJSONFile(fileName string) error {
 	// First, confirm that the directory exists.
-	err := os.MkdirAll(path.Dir(fileName), os.ModePerm)
+	err := os.MkdirAll(path.Dir(fileName), os.ModeDir|os.ModePerm)
 	if err != nil {
 		return err
 	}
