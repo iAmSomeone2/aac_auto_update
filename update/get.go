@@ -9,24 +9,31 @@ import (
 	"encoding/hex"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/iAmSomeone2/aacautoupdate/logging"
 )
 
 const (
-	AppDir       string = "adopt-a-cell"
+	// AppDir is the default app folder name
+	AppDir string = "adopt-a-cell"
+	// BaseFileName is the name for the current working file
 	BaseFileName string = "patrons_raw.txt"
-	OldFileName  string = "patrons_raw.old.txt"
-	searchStr    string = "var data"
+	// OldFileName is the name for the previous working file
+	OldFileName string = "patrons_raw.old.txt"
+	searchStr   string = "var data"
 )
 
+// GetCacheDir returns the directory path pointing to the user's cache.
 func GetCacheDir() string {
+	logger := logging.NewLogger()
+
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
-		log.Printf("WARN: Cache directory not found! Using working directory instead.")
+		logger.Warnln("WARN: Cache directory not found! Using working directory instead.")
 		cacheDir = "./"
 	}
 
@@ -39,13 +46,14 @@ func GetCacheDir() string {
 // Additionally, if the file cannot be downloaded or the downloaded file is
 // identical to the original, "" is returned.
 func CheckForUpdate(url string) string {
+	logger := logging.NewLogger()
 	// Create the file for the contents to be read into.
 	cacheDir := GetCacheDir()
 	cacheDir = path.Join(cacheDir, AppDir)
 
 	err := os.MkdirAll(cacheDir, os.ModePerm)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 
 	fullBase := path.Join(cacheDir, BaseFileName)
@@ -55,7 +63,7 @@ func CheckForUpdate(url string) string {
 
 	out, err := os.Create(fullBase)
 	if err != nil {
-		log.Println(err)
+		logger.Warnln(err)
 		return ""
 	}
 	defer out.Close()
@@ -63,7 +71,7 @@ func CheckForUpdate(url string) string {
 	// Grab the file from online
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Println(err)
+		logger.Warnln(err)
 		return ""
 	}
 	defer resp.Body.Close()
@@ -71,15 +79,15 @@ func CheckForUpdate(url string) string {
 	// Write the contents of the GET method to the file
 	n, err := io.Copy(out, resp.Body)
 	if err != nil {
-		log.Println(err)
+		logger.Warnln(err)
 		return ""
 	}
 
-	log.Printf("\nBytes copied to %s: %d\n", fullBase, n)
+	logger.Printf("\nBytes copied to %s: %d\n", fullBase, n)
 
 	err = cleanFile(fullBase)
 	if err != nil {
-		log.Println(err)
+		logger.Warnln(err)
 	}
 
 	/*
@@ -124,18 +132,19 @@ func md5Hash(filePath string) (string, error) {
 
 // compareFiles returns true if the files have different MD5 hashes.
 func compareFiles(filePath0, filePath1 string) bool {
+	logger := logging.NewLogger()
 	// Start by getting the hashes
 	hash0, err := md5Hash(filePath0)
 	if err != nil {
-		log.Println(err)
+		logger.Println(err)
 	}
 	hash1, err := md5Hash(filePath1)
 	if err != nil {
-		log.Println(err)
+		logger.Println(err)
 	}
 
-	log.Printf("Hash0: %s\n", hash0)
-	log.Printf("Hash1: %s\n", hash1)
+	logger.Printf("Hash0: %s\n", hash0)
+	logger.Printf("Hash1: %s\n", hash1)
 
 	return hash0 != hash1
 }

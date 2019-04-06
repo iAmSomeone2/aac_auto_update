@@ -20,7 +20,6 @@ const (
 	outputFile string = "data.json"
 	defaultURL string = "https://campaigns.communityfunded.com/download-supporters/?p_id=26458"
 	defaultDir string = "/var/www/cell.bdavidson.dev/html/data"
-	logDir     string = ""
 )
 
 // Main sets up the main loop.
@@ -45,11 +44,11 @@ func main() {
 		cacheDir = path.Join(cacheDir, update.AppDir)
 		err := os.Remove(path.Join(cacheDir, update.BaseFileName))
 		if err != nil {
-			log.Println(err)
+			logger.Warnln(err)
 		}
 		err = os.Remove(path.Join(cacheDir, update.OldFileName))
 		if err != nil {
-			logger.Println(err)
+			logger.Warnln(err)
 		}
 	}
 
@@ -62,7 +61,7 @@ func main() {
 
 		timerStop := false
 		if startLoop {
-			log.Println("Immediately pulling update for initial run.")
+			logger.Println("Immediately pulling update for initial run.")
 			timerStop = updateTimer.Stop()
 			startLoop = false
 		}
@@ -79,12 +78,12 @@ func main() {
 			patronList := data.NewPatronList(data.GetPatronData(cleanData))
 			cellList := data.NewCellList(patronList)
 			if err := cellList.ToJSONFile(outputPath); err != nil {
-				log.Panic(err)
+				logger.Fatal(err)
 			} else {
-				log.Printf("Data written to %s\n", outputFile)
+				logger.Printf("Data written to %s\n", outputFile)
 			}
 		} else {
-			log.Printf("Nothing to do. Will check again soon.\n")
+			logger.Printf("Nothing to do. Will check again soon.\n")
 		}
 
 		// Wait for the next check.
@@ -94,6 +93,6 @@ func main() {
 		} else {
 			s = ""
 		}
-		log.Printf("Check finished. Waiting %d minute%s...\n", *waitPtr, s)
+		logger.Printf("Check finished. Waiting %d minute%s...\n", *waitPtr, s)
 	}
 }

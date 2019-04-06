@@ -2,9 +2,10 @@ package data
 
 import (
 	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
+
+	"github.com/iAmSomeone2/aacautoupdate/logging"
 )
 
 var replacementPairs = []string{
@@ -54,6 +55,7 @@ func formatForUsage(content string) string {
 // GetPatronData takes in a string and returns a slice of
 // Patron structs.
 func GetPatronData(rawData string) []*Patron {
+	logger := logging.NewLogger()
 	var patrons []*Patron
 	// First, split the data into a 1D slice of strings using lineDelim
 	lineData := strings.Split(rawData, lineDelim)
@@ -76,7 +78,7 @@ func GetPatronData(rawData string) []*Patron {
 
 		pledgeAmt, err := strconv.Atoi(values[pledgeValIdx])
 		if err != nil {
-			log.Panic(err)
+			logger.Panic(err)
 		}
 
 		patrons = append(patrons, NewPatron(i, pledgeTime, anon, fName, lName, pledgeAmt))
