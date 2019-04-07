@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="console-application">
+  <id>dev.bdavidson.aacautoupdate</id>
+  <name>Adopt-a-Cell Automatic Updater</name>
+  <summary>Manages updating the Adopt-a-Cell web app.</summary>
+  <categories>
+    <category>Utility</category>
+    <category>ConsoleOnly</category>
+  </categories>
+  <description>
+    This snap is a server-side automatic updater for the UMN SVP Adopt-a-Cell
+    interactive graphic web app. It periodically checks if any new people have
+    donated enough to have a cell in their name and updates the web app as needed.
+  </description>
+  <releases>
+    <release version="1.0" date="2019-04-06"/>
+  </releases>
+  <provides>
+    <binary>aacautoupdate</binary>
+  </provides>
+  <icon type="local">icons/icon.svg</icon>
+  <project_license>MIT</project_license>
+  <developer_name>Brenden Davidson</developer_name>
+</component>
