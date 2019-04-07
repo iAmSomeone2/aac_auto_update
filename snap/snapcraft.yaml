@@ -29,7 +29,12 @@ architectures:
 
 
 grade: devel # must be 'stable' to release into candidate/stable channels
-confinement: classic # use 'strict' once you have the right plugs and slots
+confinement: strict # use 'strict' once you have the right plugs and slots
+
+# We're going to try to bind the 'data' directory of the website into the snap.
+layout:
+  /var/www/cell.bdavidson.dev/html/data:
+    bind: $SNAP_DATA/var/www/cell.bdavidson.dev/html/data
 
 apps:
   aacautoupdate:
