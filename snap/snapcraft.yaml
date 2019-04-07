@@ -1,28 +1,17 @@
 name: aacautoupdate # you probably want to 'snapcraft register <name>'
 title: Adopt-a-Cell Auto Updater
 base: core18 # the base snap is the execution environment for this snap
-version: 'snappy'
+#version: 'snappy'
 adopt-info: aacautoupdate
   
 license: MIT
 type: app
 
-icon: icons/icon.svg
+#icon: icons/icon.svg
 
 architectures:
-  - build-on: amd64
-    run-on: amd64
-  
-  - build-on: i386
-    run-on: i386
-    #build-error: ignore
-
-  - build-on: armhf
-    run-on: armhf
-    #build-error: ignore
-
-  - build-on: arm64
-    run-on: arm64
+  - build-on: [amd64, i386, arm64, armhf]
+    run-on: [amd64, i386, arm64, armhf]
 
 
 grade: devel # must be 'stable' to release into candidate/stable channels
