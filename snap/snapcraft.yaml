@@ -33,7 +33,7 @@ confinement: strict # use 'strict' once you have the right plugs and slots
 
 apps:
   aacautoupdate:
-    command: aacautoupdate
+    command: aacautoupdate -cleanrun
     daemon: simple
     restart-condition: on-failure
 
