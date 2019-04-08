@@ -21,3 +21,5 @@
 *.deb
 aacupdate_*/
 data.json
+*.snap
+aacautoupdate

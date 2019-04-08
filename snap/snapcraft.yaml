@@ -1,30 +1,28 @@
-name: aacautoupdate # you probably want to 'snapcraft register <name>'
+name: aacautoupdate 
 title: Adopt-a-Cell Auto Updater
-base: core18 # the base snap is the execution environment for this snap
-#version: 'snappy'
+base: core18
+version: '1.0'
 adopt-info: aacautoupdate
   
 license: MIT
 type: app
-
-#icon: icons/icon.svg
 
 architectures:
   - build-on: [amd64, i386, arm64, armhf]
     run-on: [amd64, i386, arm64, armhf]
 
 
-grade: devel # must be 'stable' to release into candidate/stable channels
-confinement: strict # use 'strict' once you have the right plugs and slots
+grade: stable # must be 'stable' to release into candidate/stable channels
+confinement: classic # use 'strict' once you have the right plugs and slots
 
 # We're going to try to bind the 'data' directory of the website into the snap.
-layout:
-  /var/www/cell.bdavidson.dev/html/data:
-    bind: $SNAP_DATA/var/www/cell.bdavidson.dev/html/data
+#layout:
+#  /var/www/cell.bdavidson.dev/html/data:
+#    bind: $SNAP_DATA/var/www/cell.bdavidson.dev/html/data
 
 apps:
   aacautoupdate:
-    command: aacautoupdate -cleanrun
+    command: bin/aacautoupdate -cleanrun
     daemon: simple
     restart-condition: on-failure
 
@@ -36,4 +34,5 @@ parts:
     go-channel: 1.12/stable
     go-importpath: github.com/iAmSomeone2/aacautoupdate
     build-packages:
+      - git
       - gcc

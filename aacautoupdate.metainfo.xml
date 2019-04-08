@@ -2,6 +2,7 @@
 <component type="console-application">
   <id>dev.bdavidson.aacautoupdate</id>
   <name>Adopt-a-Cell Automatic Updater</name>
+  <version>1.0</version>
   <summary>Manages updating the Adopt-a-Cell web app.</summary>
   <categories>
     <category>Utility</category>
