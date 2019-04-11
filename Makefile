@@ -1,5 +1,5 @@
 name = aacautoupdate
-ver = 1.0
+ver = 1.1
 
 all: build
 
