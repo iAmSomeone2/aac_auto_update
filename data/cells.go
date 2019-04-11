@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"time"
 
 	"github.com/iAmSomeone2/aacautoupdate/logging"
 )
@@ -19,6 +20,7 @@ type CellList struct {
 	credit           float32
 	remainingPatrons map[int]*Patron
 	logger           *logging.Logger
+	updateTime       time.Time
 }
 
 // Cell is a struct representing an individual cell from the array. The id value
@@ -83,6 +85,7 @@ func NewCellList(list *PatronList) *CellList {
 		credit:           credit,
 		remainingPatrons: creditPatrons,
 		logger:           logger,
+		updateTime:       time.Now(),
 	}
 }
 
@@ -198,8 +201,17 @@ func (list CellList) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	buffer.WriteString(fmt.Sprintf("\"%s\":%s", "patron_list", string(patronsJSON)))
-
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s,", "patron_list", string(patronsJSON)))
+	// Append update time to the data.
+	year, month, day := list.updateTime.Date()
+	hour, min, sec := list.updateTime.Clock()
+	timeJSON, err := json.Marshal(
+		fmt.Sprintf("%d-%s-%dT%d:%d:%d", year, month, day, hour, min, sec),
+	)
+	if err != nil {
+		return nil, err
+	}
+	buffer.WriteString(fmt.Sprintf("\"%s\":%s", "update_time", string(timeJSON)))
 	buffer.WriteRune('}')
 	// fmt.Println(string(buffer.Bytes()))
 	return buffer.Bytes(), nil

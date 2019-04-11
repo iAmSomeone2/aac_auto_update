@@ -13,6 +13,7 @@ import (
 
 	"github.com/iAmSomeone2/aacautoupdate/data"
 	"github.com/iAmSomeone2/aacautoupdate/logging"
+	"github.com/iAmSomeone2/aacautoupdate/serve"
 	"github.com/iAmSomeone2/aacautoupdate/update"
 )
 
@@ -53,6 +54,9 @@ func main() {
 	}
 
 	outputPath := path.Join(*outPtr, outputFile)
+
+	// Start HTTP server on a separate thread to serve the data file.
+	go serve.StartServer()
 
 	startLoop := true
 	waitTime := time.Duration(*waitPtr * int64(time.Minute))
